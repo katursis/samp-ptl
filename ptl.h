@@ -25,6 +25,11 @@
 #ifndef PTL_H_
 #define PTL_H_
 
+#include <algorithm>
+#include <functional>
+#include <list>
+#include <memory>
+
 #include "amx/amx.h"
 #include "plugincommon.h"
 
