@@ -1,0 +1,735 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2020 urShadow
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+#ifndef PTL_H_
+#define PTL_H_
+
+#include "amx/amx.h"
+#include "plugincommon.h"
+
+namespace ptl {  // Plugin Template Library
+class Amx {
+ public:
+  Amx(AMX *amx, void *amx_functions)
+      : amx_{amx}, amx_functions_{amx_functions} {}
+
+  uint16_t *Align16(uint16_t *v) {
+    return Call<PLUGIN_AMX_EXPORT_Align16, false, uint16_t *>(v);
+  }
+
+  uint32_t *Align32(uint32_t *v) {
+    return Call<PLUGIN_AMX_EXPORT_Align32, false, uint32_t *>(v);
+  }
+
+#if defined _I64_MAX || defined HAVE_I64
+  uint64_t *Align64(uint64_t *v) {
+    return Call<PLUGIN_AMX_EXPORT_Align64, false, uint64_t *>(v);
+  }
+#endif
+
+  template <bool raise_error = true>
+  int Allot(int cells, cell *amx_addr, cell **phys_addr) {
+    return Call<PLUGIN_AMX_EXPORT_Allot, raise_error>(amx_, cells, amx_addr,
+                                                      phys_addr);
+  }
+
+  template <bool raise_error = true>
+  int Callback(cell index, cell *result, cell *params) {
+    return Call<PLUGIN_AMX_EXPORT_Callback, raise_error>(amx_, index, result,
+                                                         params);
+  }
+
+  template <bool raise_error = true>
+  int Cleanup() {
+    return Call<PLUGIN_AMX_EXPORT_Cleanup, raise_error>(amx_);
+  }
+
+  template <bool raise_error = true>
+  int Clone(AMX *amx_clone, void *data) {
+    return Call<PLUGIN_AMX_EXPORT_Clone, raise_error>(amx_clone, amx_, data);
+  }
+
+  template <bool raise_error = true>
+  int Exec(cell *retval, int index) {
+    return Call<PLUGIN_AMX_EXPORT_Exec, raise_error>(amx_, retval, index);
+  }
+
+  template <bool raise_error = true>
+  int FindNative(const char *name, int *index) {
+    return Call<PLUGIN_AMX_EXPORT_FindNative, raise_error>(amx_, name, index);
+  }
+
+  template <bool raise_error = true>
+  int FindPublic(const char *funcname, int *index) {
+    return Call<PLUGIN_AMX_EXPORT_FindPublic, raise_error>(amx_, funcname,
+                                                           index);
+  }
+
+  template <bool raise_error = true>
+  int FindPubVar(const char *varname, cell *amx_addr) {
+    return Call<PLUGIN_AMX_EXPORT_FindPubVar, raise_error>(amx_, varname,
+                                                           amx_addr);
+  }
+
+  template <bool raise_error = true>
+  int FindTagId(cell tag_id, char *tagname) {
+    return Call<PLUGIN_AMX_EXPORT_FindTagId, raise_error>(amx_, tag_id,
+                                                          tagname);
+  }
+
+  template <bool raise_error = true>
+  int Flags(uint16_t *flags) {
+    return Call<PLUGIN_AMX_EXPORT_Flags, raise_error>(amx_, flags);
+  }
+
+  template <bool raise_error = true>
+  int GetAddr(cell amx_addr, cell **phys_addr) {
+    return Call<PLUGIN_AMX_EXPORT_GetAddr, raise_error>(amx_, amx_addr,
+                                                        phys_addr);
+  }
+
+  template <bool raise_error = true>
+  int GetNative(int index, char *funcname) {
+    return Call<PLUGIN_AMX_EXPORT_GetNative, raise_error>(amx_, index,
+                                                          funcname);
+  }
+
+  template <bool raise_error = true>
+  int GetPublic(int index, char *funcname) {
+    return Call<PLUGIN_AMX_EXPORT_GetPublic, raise_error>(amx_, index,
+                                                          funcname);
+  }
+
+  template <bool raise_error = true>
+  int GetPubVar(int index, char *varname, cell *amx_addr) {
+    return Call<PLUGIN_AMX_EXPORT_GetPubVar, raise_error>(amx_, index, varname,
+                                                          amx_addr);
+  }
+
+  template <bool raise_error = true>
+  int GetString(char *dest, const cell *source, int use_wchar,
+                std::size_t size) {
+    return Call<PLUGIN_AMX_EXPORT_GetString, raise_error>(dest, source,
+                                                          use_wchar, size);
+  }
+
+  template <bool raise_error = true>
+  int GetTag(int index, char *tagname, cell *tag_id) {
+    return Call<PLUGIN_AMX_EXPORT_GetTag, raise_error>(amx_, index, tagname,
+                                                       tag_id);
+  }
+
+  template <bool raise_error = true>
+  int GetUserData(long tag, void **ptr) {
+    return Call<PLUGIN_AMX_EXPORT_GetUserData, raise_error>(amx_, tag, ptr);
+  }
+
+  template <bool raise_error = true>
+  int Init(void *program) {
+    return Call<PLUGIN_AMX_EXPORT_Init, raise_error>(amx_, program);
+  }
+
+  template <bool raise_error = true>
+  int InitJIT(void *reloc_table, void *native_code) {
+    return Call<PLUGIN_AMX_EXPORT_InitJIT, raise_error>(amx_, reloc_table,
+                                                        native_code);
+  }
+
+  template <bool raise_error = true>
+  int MemInfo(long *codesize, long *datasize, long *stackheap) {
+    return Call<PLUGIN_AMX_EXPORT_MemInfo, raise_error>(amx_, codesize,
+                                                        datasize, stackheap);
+  }
+
+  template <bool raise_error = true>
+  int NameLength(int *length) {
+    return Call<PLUGIN_AMX_EXPORT_NameLength, raise_error>(amx_, length);
+  }
+
+  AMX_NATIVE_INFO *NativeInfo(const char *name, AMX_NATIVE func) {
+    return Call<PLUGIN_AMX_EXPORT_NativeInfo, false, AMX_NATIVE_INFO *>(name,
+                                                                        func);
+  }
+
+  template <bool raise_error = true>
+  int NumNatives(int *number) {
+    return Call<PLUGIN_AMX_EXPORT_NumNatives, raise_error>(amx_, number);
+  }
+
+  template <bool raise_error = true>
+  int NumPublics(int *number) {
+    return Call<PLUGIN_AMX_EXPORT_NumPublics, raise_error>(amx_, number);
+  }
+
+  template <bool raise_error = true>
+  int NumPubVars(int *number) {
+    return Call<PLUGIN_AMX_EXPORT_NumPubVars, raise_error>(amx_, number);
+  }
+
+  template <bool raise_error = true>
+  int NumTags(int *number) {
+    return Call<PLUGIN_AMX_EXPORT_NumTags, raise_error>(amx_, number);
+  }
+
+  template <bool raise_error = true>
+  int Push(cell value) {
+    return Call<PLUGIN_AMX_EXPORT_Push, raise_error>(amx_, value);
+  }
+
+  template <bool raise_error = true>
+  int PushArray(cell *amx_addr, cell **phys_addr, const cell array[],
+                int numcells) {
+    return Call<PLUGIN_AMX_EXPORT_PushArray, raise_error>(
+        amx_, amx_addr, phys_addr, array, numcells);
+  }
+
+  template <bool raise_error = true>
+  int PushString(cell *amx_addr, cell **phys_addr, const char *string, int pack,
+                 int use_wchar) {
+    return Call<PLUGIN_AMX_EXPORT_PushString, raise_error>(
+        amx_, amx_addr, phys_addr, string, pack, use_wchar);
+  }
+
+  template <bool raise_error = true>
+  int RaiseError(int error) {
+    return Call<PLUGIN_AMX_EXPORT_RaiseError, raise_error>(amx_, error);
+  }
+
+  template <bool raise_error = true>
+  int Register(const AMX_NATIVE_INFO *nativelist, int number) {
+    return Call<PLUGIN_AMX_EXPORT_Register, raise_error>(amx_, nativelist,
+                                                         number);
+  }
+
+  template <bool raise_error = true>
+  int Release(cell amx_addr) {
+    return Call<PLUGIN_AMX_EXPORT_Release, raise_error>(amx_, amx_addr);
+  }
+
+  template <bool raise_error = true>
+  int SetCallback(AMX_CALLBACK callback) {
+    return Call<PLUGIN_AMX_EXPORT_SetCallback, raise_error>(amx_, callback);
+  }
+
+  template <bool raise_error = true>
+  int SetDebugHook(AMX_DEBUG debug) {
+    return Call<PLUGIN_AMX_EXPORT_SetDebugHook, raise_error>(amx_, debug);
+  }
+
+  template <bool raise_error = true>
+  int SetString(cell *dest, const char *source, int pack, int use_wchar,
+                std::size_t size) {
+    return Call<PLUGIN_AMX_EXPORT_SetString, raise_error>(dest, source, pack,
+                                                          use_wchar, size);
+  }
+
+  template <bool raise_error = true>
+  int SetUserData(long tag, void *ptr) {
+    return Call<PLUGIN_AMX_EXPORT_SetUserData, raise_error>(amx_, tag, ptr);
+  }
+
+  template <bool raise_error = true>
+  int StrLen(const cell *cstring, int *length) {
+    return Call<PLUGIN_AMX_EXPORT_StrLen, raise_error>(cstring, length);
+  }
+
+  template <bool raise_error = true>
+  int UTF8Check(const char *string, int *length) {
+    return Call<PLUGIN_AMX_EXPORT_UTF8Check, raise_error>(string, length);
+  }
+
+  template <bool raise_error = true>
+  int UTF8Get(const char *string, const char **endptr, cell *value) {
+    return Call<PLUGIN_AMX_EXPORT_UTF8Get, raise_error>(string, endptr, value);
+  }
+
+  template <bool raise_error = true>
+  int UTF8Len(const cell *cstr, int *length) {
+    return Call<PLUGIN_AMX_EXPORT_UTF8Len, raise_error>(cstr, length);
+  }
+
+  template <bool raise_error = true>
+  int UTF8Put(char *string, char **endptr, int maxchars, cell value) {
+    return Call<PLUGIN_AMX_EXPORT_UTF8Put, raise_error>(string, endptr,
+                                                        maxchars, value);
+  }
+
+  inline AMX *GetPtr() const { return amx_; }
+
+  template <PLUGIN_AMX_EXPORT func, bool raise_error = true, typename Ret = int,
+            typename... Args>
+  inline Ret Call(Args... args) {
+    Ret result = reinterpret_cast<Ret(AMXAPI **)(Args...)>(
+        amx_functions_)[func](args...);
+
+    if constexpr (raise_error && std::is_same<int, Ret>::value) {
+      if (result != AMX_ERR_NONE) {
+        RaiseError<false>(result);
+
+        throw std::runtime_error{std::string(__func__) + ": amx function (" +
+                                 std::to_string(func) + ") error " +
+                                 std::to_string(result)};
+      }
+    }
+
+    return result;
+  }
+
+ private:
+  AMX *amx_{};
+  void *amx_functions_{};
+};
+
+class Public {
+ public:
+  Public(const std::string &name, const std::shared_ptr<Amx> &amx,
+         bool use_caching = false)
+      : name_{name}, amx_{amx}, use_caching_{use_caching} {
+    exists_ = amx_->FindPublic<false>(name_.c_str(), &index_) == AMX_ERR_NONE &&
+              index_ >= 0;
+  }
+
+  template <typename... Args>
+  inline cell Exec(Args... args) {
+    cell retval{};
+
+    if (use_caching_) {
+      if (!cached_) {
+        amx_->FindPublic(name_.c_str(), &index_);
+
+        cached_ = true;
+      }
+    } else {
+      amx_->FindPublic(name_.c_str(), &index_);
+    }
+
+    if constexpr (sizeof...(Args)) {
+      Push(args...);
+    }
+
+    amx_->Exec(&retval, index_);
+
+    if (amx_addr_to_release_) {
+      amx_->Release(amx_addr_to_release_);
+
+      amx_addr_to_release_ = 0;
+    }
+
+    return retval;
+  }
+
+  inline bool Exists() const { return exists_; }
+
+  inline const std::string &GetName() { return name_; }
+
+  template <typename T, typename... Args>
+  inline void Push(T arg1, Args... args) {
+    Push(args...);
+
+    Push(arg1);
+  }
+
+  template <typename T>
+  inline void Push(T arg) {
+    if constexpr (std::is_pointer<T>::value) {
+      if constexpr (std::is_same<T, const char *>::value ||
+                    std::is_same<T, char *>::value) {
+        cell amx_addr{};
+
+        amx_->PushString(&amx_addr, nullptr, arg, 0, 0);
+
+        if (!amx_addr_to_release_) {
+          amx_addr_to_release_ = amx_addr;
+        }
+      } else {
+        amx_->Push(reinterpret_cast<cell>(arg));
+      }
+    } else if constexpr (std::is_floating_point<T>::value) {
+      amx_->Push(amx_ftoc(arg));
+    } else if constexpr (std::is_same<typename std::decay<T>::type,
+                                      std::string>::value) {
+      Push(arg.c_str());
+    } else {
+      amx_->Push(static_cast<cell>(arg));
+    }
+  }
+
+ private:
+  std::shared_ptr<Amx> amx_;
+  std::string name_;
+  int index_{};
+  bool exists_{};
+  bool cached_{};
+  bool use_caching_{};
+
+  cell amx_addr_to_release_{};
+};
+
+template <typename ScriptT>
+class AbstractScript {
+ public:
+  class Cell {
+   public:
+    operator cell() { return amx_addr_; }
+
+    operator cell *() { return script_->GetPhysAddr(amx_addr_); }
+
+    operator float() { return amx_ctof(amx_addr_); }
+
+    operator float *() {
+      return reinterpret_cast<float *>(script_->GetPhysAddr(amx_addr_));
+    }
+
+    operator std::string() { return script_->GetString(amx_addr_); }
+
+    cell amx_addr_{};
+    ScriptT *script_{};
+  };
+
+  bool IsGamemode() const { return is_gamemode_; }
+
+  std::string GetPublicName(int index) {
+    int len{};
+    amx_->NameLength(&len);
+
+    std::unique_ptr<char[]> name{new char[len + 1]{}};
+    amx_->GetPublic(index, name.get());
+
+    return name.get();
+  }
+
+  template <typename T = cell>
+  T GetPublicVarValue(const char *name) {
+    cell amx_addr{};
+    amx_->FindPubVar(name, &amx_addr);
+
+    return static_cast<T>(*GetPhysAddr(amx_addr));
+  }
+
+  bool PublicVarExists(const char *name) {
+    cell unused{};
+    return amx_->FindPubVar<false>(name, &unused) == AMX_ERR_NONE;
+  }
+
+  std::string GetString(cell amx_addr) {
+    cell *addr = GetPhysAddr(amx_addr);
+
+    int len{};
+    amx_->StrLen(addr, &len);
+
+    std::unique_ptr<char[]> str{new char[len + 1]{}};
+    amx_->GetString(str.get(), addr, 0, len + 1);
+
+    return str.get();
+  }
+
+  void SetString(cell *dest, const std::string &src, std::size_t size) {
+    amx_->SetString(dest, src.c_str(), 0, 0, size);
+  }
+
+  cell *GetPhysAddr(cell amx_addr) {
+    cell *phys_addr{};
+
+    amx_->GetAddr(amx_addr, &phys_addr);
+
+    return phys_addr;
+  }
+
+  void RegisterNative(const char *name, AMX_NATIVE func) {
+    amx_->Register<false>(amx_->NativeInfo(name, func), 1);
+  }
+
+  auto MakePublic(const std::string &name, bool use_caching = false) {
+    return std::make_shared<Public>(name, amx_, use_caching);
+  }
+
+  const char *VarVersion() {
+    throw std::runtime_error{
+        "Method const char *AbstractScript::VarVersion() must be implemented"};
+  };
+
+  const char *VarIsGamemode() { return nullptr; }
+
+  bool OnLoad() { return true; }
+
+  void Init(AMX *amx, void *amx_functions) {
+    amx_ = std::make_shared<Amx>(amx, amx_functions);
+
+    if (impl_->VarIsGamemode() && PublicVarExists(impl_->VarIsGamemode())) {
+      is_gamemode_ = GetPublicVarValue<bool>(impl_->VarIsGamemode());
+    }
+  }
+
+  const auto &GetAmx() const { return amx_; }
+
+  bool HasVersion() { return PublicVarExists(impl_->VarVersion()); }
+
+  int GetVersion() { return GetPublicVarValue<int>(impl_->VarVersion()); }
+
+  inline void AssertParams(std::size_t count, cell *params) const {
+    if (params[0] != (count * sizeof(cell))) {
+      throw std::runtime_error{"Number of parameters must be equal to " +
+                               std::to_string(count)};
+    }
+  }
+
+  inline void AssertMinParams(std::size_t min_count, cell *params) const {
+    if (params[0] < (min_count * sizeof(cell))) {
+      throw std::runtime_error{"Number of parameters must be >= " +
+                               std::to_string(min_count)};
+    }
+  }
+
+  inline bool operator==(AMX *amx) { return amx_->GetPtr() == amx; }
+
+ protected:
+  std::shared_ptr<Amx> amx_;
+  bool is_gamemode_{};
+
+ private:
+  ScriptT *impl_{};
+};
+
+template <typename PluginT, typename ScriptT,
+          typename CellT = typename ScriptT::Cell>
+class AbstractPlugin {
+ public:
+  using LogPrintf = void (*)(const char *fmt, ...);
+
+  static PluginT &Instance() {
+    static PluginT instance;
+
+    return instance;
+  }
+
+  int Version() {
+    throw std::runtime_error{
+        "Method int AbstractPlugin::Version() must be implemented"};
+  };
+
+  const char *Name() {
+    throw std::runtime_error{
+        "Method const char *AbstractPlugin::Name() must be implemented"};
+  };
+
+  bool OnLoad() { return true; }
+
+  void OnUnload() {}
+
+  std::string VersionAsString() const {
+    std::string version;
+
+    int value = version_;
+
+    while (value) {
+      version = std::to_string(value % 10) + version;
+
+      value /= 10;
+
+      if (value) {
+        version = "." + version;
+      }
+    }
+
+    return version;
+  }
+
+  bool DoLoad(void **ppData) {
+    plugin_data_ = ppData;
+
+    logprintf_ =
+        reinterpret_cast<LogPrintf>(plugin_data_[PLUGIN_DATA_LOGPRINTF]);
+
+    impl_ = static_cast<PluginT *>(this);
+
+    try {
+      name_ = impl_->Name();
+      version_ = impl_->Version();
+
+      return impl_->OnLoad();
+    } catch (const std::exception &e) {
+      Log("%s: %s", __func__, e.what());
+    }
+
+    return false;
+  }
+
+  void DoUnload() {
+    try {
+      impl_->OnUnload();
+    } catch (const std::exception &e) {
+      Log("%s: %s", __func__, e.what());
+    }
+  }
+
+  void DoAmxLoad(AMX *amx) {
+    try {
+      auto script = std::make_shared<ScriptT>();
+
+      script->Init(amx, plugin_data_[PLUGIN_DATA_AMX_EXPORTS]);
+
+      if (!script->HasVersion()) {
+        return;
+      }
+
+      if (script->GetVersion() != version_) {
+        throw std::runtime_error{"Mismatch between the plugin (" +
+                                 std::to_string(version_) + ") and include (" +
+                                 std::to_string(script->GetVersion()) +
+                                 ") versions"};
+      }
+
+      for (auto &item : natives_) {
+        script->RegisterNative(item.second.c_str(), item.first);
+      }
+
+      if (!script->OnLoad()) {
+        return;
+      }
+
+      bool gamemode_exists =
+          std::any_of(scripts_.begin(), scripts_.end(),
+                      [](const auto &script) { return script->IsGamemode(); });
+
+      if (script->IsGamemode()) {
+        scripts_.push_back(script);
+
+        if (gamemode_exists) {
+          throw std::runtime_error{
+              "Warning! You probably forgot to define FILTERSCRIPT in one "
+              "of your filterscripts"};
+        }
+      } else {
+        if (scripts_.size() && gamemode_exists) {
+          scripts_.insert(std::prev(scripts_.end()), script);
+        } else {
+          scripts_.push_back(script);
+        }
+      }
+    } catch (const std::exception &e) {
+      Log("%s: %s", __func__, e.what());
+    }
+  }
+
+  void DoAmxUnload(AMX *amx) {
+    auto script = std::find_if(scripts_.begin(), scripts_.end(),
+                               [amx](auto &script) { return *script == amx; });
+
+    if (script != scripts_.end()) {
+      scripts_.erase(script);
+    }
+  }
+
+  ScriptT &GetScript(AMX *amx) {
+    auto script = std::find_if(scripts_.begin(), scripts_.end(),
+                               [amx](auto &script) { return *script == amx; });
+
+    if (script == scripts_.end()) {
+      throw std::runtime_error{"Script not found"};
+    }
+
+    return **script;
+  }
+
+  template <auto func, bool expand_params = true>
+  void RegisterNative(const char *name) {
+    natives_[NativeGenerator<decltype(func), func, expand_params>::Native] =
+        name;
+  }
+
+  const std::string &GetNativeName(AMX_NATIVE func) {
+    return natives_.at(func);
+  }
+
+  bool EveryScript(std::function<bool(const std::shared_ptr<ScriptT> &)> func) {
+    return std::all_of(scripts_.begin(), scripts_.end(), func);
+  }
+
+  template <typename... Args>
+  void Log(const std::string &fmt, Args... args) {
+    if (!logprintf_) {
+      throw std::runtime_error{"logprintf_ is null"};
+    }
+
+    if (name_.empty()) {
+      logprintf_(fmt.c_str(), args...);
+    } else {
+      logprintf_(("[%s] " + fmt).c_str(), name_.c_str(), args...);
+    }
+  }
+
+ protected:
+  template <typename Sig, Sig, bool>
+  struct NativeGenerator;
+
+  template <typename... Args, auto func, bool expand_params>
+  struct NativeGenerator<cell (*)(ScriptT *, Args...), func, expand_params> {
+    template <std::size_t... index>
+    inline static cell Call(ScriptT *script, cell *params,
+                            std::index_sequence<index...>) {
+      return func(script, CellT{params[index + 1], script}...);
+    }
+
+    static cell AMX_NATIVE_CALL Native(AMX *amx, cell *params) {
+      auto &plugin = PluginT::Instance();
+
+      try {
+        auto &script = plugin.GetScript(amx);
+
+        if constexpr (expand_params) {
+          script.AssertParams(sizeof...(Args), params);
+
+          return Call(&script, params,
+                      std::make_index_sequence<sizeof...(Args)>{});
+        } else {
+          return func(&script, params);
+        }
+      } catch (const std::exception &e) {
+        plugin.Log("%s: %s", plugin.GetNativeName(Native).c_str(), e.what());
+      }
+
+      return 0;
+    }
+  };
+
+  AbstractPlugin() = default;
+  AbstractPlugin(const AbstractPlugin &) = delete;
+  AbstractPlugin(AbstractPlugin &&) = delete;
+  AbstractPlugin &operator=(const AbstractPlugin &) = delete;
+  AbstractPlugin &operator=(AbstractPlugin &&) = delete;
+
+  std::list<std::shared_ptr<ScriptT>> scripts_;
+  std::unordered_map<AMX_NATIVE, std::string> natives_;
+
+  void **plugin_data_{};
+  LogPrintf logprintf_{};
+
+  std::string name_;
+  int version_{};
+
+ private:
+  PluginT *impl_{};
+};
+}  // namespace ptl
+#endif  // PTL_H_
