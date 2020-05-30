@@ -1,3 +1,3 @@
-# SA:MP Plugin Template Library (samp-ptl)
+# SA:MP Plugin Template Library
 
 [Example](https://github.com/urShadow/samp-ptl/tree/master/example)
