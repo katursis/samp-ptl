@@ -22,6 +22,8 @@
  * SOFTWARE.
  */
 
+#define _GLIBCXX_USE_CXX11_ABI 0
+
 #include "../ptl.h"
 
 #include "Pawn.Example.inc"
