@@ -29,6 +29,7 @@
 #include <functional>
 #include <list>
 #include <memory>
+#include <sstream>
 
 #include "amx/amx.h"
 #include "plugincommon.h"
@@ -292,13 +293,83 @@ class Amx {
       if (result != AMX_ERR_NONE) {
         RaiseError<false>(result);
 
-        throw std::runtime_error{std::string(__func__) + ": amx function (" +
-                                 std::to_string(func) + ") error " +
-                                 std::to_string(result)};
+        throw std::runtime_error{std::string(__func__) + ": amx_" +
+                                 StrFunction(func) + "(" + DumpArgs(args...) +
+                                 "): " + StrError(result) + " (" +
+                                 std::to_string(result) + ")"};
       }
     }
 
     return result;
+  }
+
+  template <typename T, typename... Args>
+  inline std::string DumpArgs(T arg1, Args... args) {
+    std::stringstream ss;
+
+    ss << typeid(T).name() << ":" << arg1;
+    ((ss << ", " << typeid(Args).name() << ":" << args), ...);
+
+    return ss.str();
+  }
+
+  inline const std::string &StrFunction(PLUGIN_AMX_EXPORT func) {
+    static const std::string functions[] = {
+        "Align16",      "Align32",    "Align64",     "Allot",
+        "Callback",     "Cleanup",    "Clone",       "Exec",
+        "FindNative",   "FindPublic", "FindPubVar",  "FindTagId",
+        "Flags",        "GetAddr",    "GetNative",   "GetPublic",
+        "GetPubVar",    "GetString",  "GetTag",      "GetUserData",
+        "Init",         "InitJIT",    "MemInfo",     "NameLength",
+        "NativeInfo",   "NumNatives", "NumPublics",  "NumPubVars",
+        "NumTags",      "Push",       "PushArray",   "PushString",
+        "RaiseError",   "Register",   "Release",     "SetCallback",
+        "SetDebugHook", "SetString",  "SetUserData", "StrLen",
+        "UTF8Check",    "UTF8Get",    "UTF8Len",     "UTF8Put",
+    };
+
+    if (func < 0 || func >= sizeof(functions) / sizeof(functions[0])) {
+      return "(unknown function)";
+    }
+
+    return functions[func];
+  }
+
+  inline const std::string &StrError(int errnum) {
+    static const std::string messages[] = {
+        "(none)",                                          // AMX_ERR_NONE
+        "Forced exit",                                     // AMX_ERR_EXIT
+        "Assertion failed",                                // AMX_ERR_ASSERT
+        "Stack/heap collision (insufficient stack size)",  // AMX_ERR_STACKERR
+        "Array index out of bounds",                       // AMX_ERR_BOUNDS
+        "Invalid memory access",                           // AMX_ERR_MEMACCESS
+        "Invalid instruction",                             // AMX_ERR_INVINSTR
+        "Stack underflow",                                 // AMX_ERR_STACKLOW
+        "Heap underflow",                                  // AMX_ERR_HEAPLOW
+        "No (valid) native function callback",             // AMX_ERR_CALLBACK
+        "Native function failed",                          // AMX_ERR_NATIVE
+        "Divide by zero",                                  // AMX_ERR_DIVIDE
+        "(sleep mode)",                                    // AMX_ERR_SLEEP
+        "Invalid state for this access",                   // AMX_ERR_INVSTATE
+        "(reserved)",                                      // 14
+        "(reserved)",                                      // 15
+        "Out of memory",                                   // AMX_ERR_MEMORY
+        "Invalid/unsupported P-code file format",          // AMX_ERR_FORMAT
+        "File is for a newer version of the AMX",          // AMX_ERR_VERSION
+        "File or function is not found",                   // AMX_ERR_NOTFOUND
+        "Invalid index parameter (bad entry point)",       // AMX_ERR_INDEX
+        "Debugger cannot run",                             // AMX_ERR_DEBUG
+        "AMX not initialized (or doubly initialized)",     // AMX_ERR_INIT
+        "Unable to set user data field (table full)",      // AMX_ERR_USERDATA
+        "Cannot initialize the JIT",                       // AMX_ERR_INIT_JIT
+        "Parameter error",                                 // AMX_ERR_PARAMS
+    };
+
+    if (errnum < 0 || errnum >= sizeof(messages) / sizeof(messages[0])) {
+      return "(unknown error)";
+    }
+
+    return messages[errnum];
   }
 
  private:
