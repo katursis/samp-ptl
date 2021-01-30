@@ -586,7 +586,9 @@ class AbstractScript {
   ScriptT *impl_{};
 };
 
-template <typename PluginT, typename ScriptT,
+class DummyScript : public AbstractScript<DummyScript> {};
+
+template <typename PluginT, typename ScriptT = DummyScript,
           typename CellT = typename ScriptT::Cell>
 class AbstractPlugin {
  public:
