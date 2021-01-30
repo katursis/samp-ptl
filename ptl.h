@@ -600,15 +600,9 @@ class AbstractPlugin {
     return instance;
   }
 
-  int Version() {
-    throw std::runtime_error{
-        "Method int AbstractPlugin::Version() must be implemented"};
-  };
+  int Version() { return 100; };  // 1.0.0
 
-  const char *Name() {
-    throw std::runtime_error{
-        "Method const char *AbstractPlugin::Name() must be implemented"};
-  };
+  const char *Name() { return typeid(PluginT).name(); };
 
   bool OnLoad() { return true; }
 
