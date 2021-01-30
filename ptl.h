@@ -540,10 +540,7 @@ class AbstractScript {
     return std::make_shared<Public>(name, amx_, use_caching);
   }
 
-  const char *VarVersion() {
-    throw std::runtime_error{
-        "Method const char *AbstractScript::VarVersion() must be implemented"};
-  };
+  const char *VarVersion() { return nullptr; };
 
   const char *VarIsGamemode() { return nullptr; }
 
@@ -559,7 +556,9 @@ class AbstractScript {
 
   const auto &GetAmx() const { return amx_; }
 
-  bool HasVersion() { return PublicVarExists(impl_->VarVersion()); }
+  bool HasVersion() {
+    return impl_->VarVersion() && PublicVarExists(impl_->VarVersion());
+  }
 
   int GetVersion() { return GetPublicVarValue<int>(impl_->VarVersion()); }
 
