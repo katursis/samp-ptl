@@ -664,11 +664,7 @@ class AbstractPlugin {
 
       script->Init(amx, plugin_data_[PLUGIN_DATA_AMX_EXPORTS]);
 
-      if (!script->HasVersion()) {
-        return;
-      }
-
-      if (script->GetVersion() != version_) {
+      if (script->HasVersion() && script->GetVersion() != version_) {
         throw std::runtime_error{"Mismatch between the plugin (" +
                                  std::to_string(version_) + ") and include (" +
                                  std::to_string(script->GetVersion()) +
