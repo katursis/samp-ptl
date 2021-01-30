@@ -11,8 +11,8 @@ C++17 template library that allows you to create your own plugins for **SA:MP** 
 * Checking for a version match between the plugin and scripts
 
 ## Examples
-[Simple example](https://github.com/urShadow/samp-ptl/tree/master/example)
+[Simple example](https://github.com/katursis/samp-ptl/tree/master/example)
 
-[Pawn.CMD](https://github.com/urShadow/Pawn.CMD)
+[Pawn.CMD](https://github.com/katursis/Pawn.CMD)
 
-[Pawn.Regex](https://github.com/urShadow/Pawn.Regex)
+[Pawn.Regex](https://github.com/katursis/Pawn.Regex)
