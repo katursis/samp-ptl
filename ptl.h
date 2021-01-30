@@ -604,9 +604,13 @@ class AbstractPlugin {
 
   const char *Name() { return typeid(PluginT).name(); };
 
-  bool OnLoad() { return true; }
+  bool OnLoad() {
+    Log("plugin v%s loaded", VersionAsString().c_str());
 
-  void OnUnload() {}
+    return true;
+  }
+
+  void OnUnload() { Log("plugin v%s unloaded", VersionAsString().c_str()); }
 
   std::string VersionAsString() const {
     std::string version;
