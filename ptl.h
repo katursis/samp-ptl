@@ -610,7 +610,7 @@ class AbstractPlugin {
     return true;
   }
 
-  void OnUnload() { Log("plugin v%s unloaded", VersionAsString().c_str()); }
+  void OnUnload() { Log("plugin unloaded"); }
 
   std::string VersionAsString() const {
     std::string version;
