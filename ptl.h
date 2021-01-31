@@ -725,8 +725,10 @@ class AbstractPlugin {
 
   template <auto func, bool expand_params = true>
   void RegisterNative(const char *name) {
-    natives_[NativeGenerator<decltype(func), func, expand_params>::Native] =
-        name;
+    natives_[NativeGenerator<
+        typename std::add_pointer<
+            typename std::remove_pointer<decltype(func)>::type>::type,
+        func, expand_params>::Native] = name;
   }
 
   const std::string &GetNativeName(AMX_NATIVE func) {
