@@ -35,6 +35,8 @@
 #include "plugincommon.h"
 
 namespace ptl {  // Plugin Template Library
+using LogPrintf = void (*)(const char *fmt, ...);
+
 class Amx {
  public:
   Amx(AMX *amx, void *amx_functions)
@@ -546,12 +548,16 @@ class AbstractScript {
 
   bool OnLoad() { return true; }
 
-  void Init(AMX *amx, void *amx_functions) {
+  void Init(AMX *amx, void *amx_functions, LogPrintf logprintf,
+            const std::string &plugin_name) {
     amx_ = std::make_shared<Amx>(amx, amx_functions);
 
     if (impl_->VarIsGamemode() && PublicVarExists(impl_->VarIsGamemode())) {
       is_gamemode_ = GetPublicVarValue<bool>(impl_->VarIsGamemode());
     }
+
+    logprintf_ = logprintf;
+    plugin_name_ = plugin_name;
   }
 
   const auto &GetAmx() const { return amx_; }
@@ -576,11 +582,27 @@ class AbstractScript {
     }
   }
 
+  template <typename... Args>
+  void Log(const std::string &fmt, Args... args) {
+    if (!logprintf_) {
+      throw std::runtime_error{"logprintf_ is null"};
+    }
+
+    if (plugin_name_.empty()) {
+      logprintf_(fmt.c_str(), args...);
+    } else {
+      logprintf_(("[%s] " + fmt).c_str(), plugin_name_.c_str(), args...);
+    }
+  }
+
   inline bool operator==(AMX *amx) { return amx_->GetPtr() == amx; }
 
  protected:
   std::shared_ptr<Amx> amx_;
   bool is_gamemode_{};
+
+  LogPrintf logprintf_{};
+  std::string plugin_name_;
 
  private:
   ScriptT *impl_{};
@@ -592,8 +614,6 @@ template <typename PluginT, typename ScriptT = DummyScript,
           typename CellT = typename ScriptT::Cell>
 class AbstractPlugin {
  public:
-  using LogPrintf = void (*)(const char *fmt, ...);
-
   static PluginT &Instance() {
     static PluginT instance;
 
@@ -662,7 +682,8 @@ class AbstractPlugin {
     try {
       auto script = std::make_shared<ScriptT>();
 
-      script->Init(amx, plugin_data_[PLUGIN_DATA_AMX_EXPORTS]);
+      script->Init(amx, plugin_data_[PLUGIN_DATA_AMX_EXPORTS], logprintf_,
+                   name_);
 
       if (script->HasVersion() && script->GetVersion() != version_) {
         throw std::runtime_error{"Mismatch between the plugin (" +
