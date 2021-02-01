@@ -10,7 +10,40 @@ C++17 template library that allows you to create your own plugins for **SA:MP** 
 * Logging
 * Checking for a version match between the plugin and scripts
 
-## Examples
+## Example
+
+```cpp
+#include "samp-ptl/ptl.h"
+
+class Script : public ptl::AbstractScript<Script> {
+ public:
+  // native ExampleNative(int_number, Float:float_number, &ref, const text[]);
+  cell n_ExampleNative(int int_number, float float_number, cell *ref,
+                       std::string text) {
+    Log("int_number = %d, float_number = %.2f, text = '%s'", int_number,
+        float_number, text.c_str());
+
+    *ref = 23;
+
+    return 1;
+  }
+};
+
+class Plugin : public ptl::AbstractPlugin<Plugin, Script> {
+ public:
+  const char *Name() { return "samp-ptl-example-plugin"; }
+
+  bool OnLoad() {
+    RegisterNative<&Script::n_ExampleNative>("ExampleNative");
+
+    Log("plugin loaded");
+
+    return true;
+  }
+};
+```
+
+## More examples
 [Simple example](https://github.com/katursis/samp-ptl/tree/master/example)
 
 [Pawn.CMD](https://github.com/katursis/Pawn.CMD)

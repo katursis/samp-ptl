@@ -26,44 +26,32 @@
 
 #include "../ptl.h"
 
-#include "Pawn.Example.inc"
-
 class Script : public ptl::AbstractScript<Script> {
  public:
-  const char *VarVersion() { return "_pawn_example_version"; }
+  // native ExampleNative(int_number, Float:float_number, &ref, const text[]);
+  cell n_ExampleNative(int int_number, float float_number, cell *ref,
+                       std::string text) {
+    Log("int_number = %d, float_number = %.2f, text = '%s'", int_number,
+        float_number, text.c_str());
 
-  bool OnLoad() {
-    // your code
-    return true;
-  }
-};
-
-class Plugin : public ptl::AbstractPlugin<Plugin, Script> {
- public:
-  const char *Name() { return "Pawn.Example"; }
-
-  int Version() { return PAWN_EXAMPLE_VERSION; }
-
-  bool OnLoad() {
-    RegisterNative<n_PrintText>("PrintText");
-
-    Log("plugin loaded");
-
-    return true;
-  }
-
-  void OnUnload() { Log("plugin unloaded"); }
-
-  static cell n_PrintText(Script *script, std::string text) {
-    Plugin::Instance().Log("PrintText('%s');", text.c_str());
+    *ref = 23;
 
     return 1;
   }
 };
 
-PLUGIN_EXPORT unsigned int PLUGIN_CALL Supports() {
-  return SUPPORTS_VERSION | SUPPORTS_AMX_NATIVES;
-}
+class Plugin : public ptl::AbstractPlugin<Plugin, Script> {
+ public:
+  const char *Name() { return "samp-ptl-example-plugin"; }
+
+  bool OnLoad() {
+    RegisterNative<&Script::n_ExampleNative>("ExampleNative");
+
+    Log("plugin loaded");
+
+    return true;
+  }
+};
 
 PLUGIN_EXPORT bool PLUGIN_CALL Load(void **ppData) {
   return Plugin::Instance().DoLoad(ppData);
@@ -77,4 +65,8 @@ PLUGIN_EXPORT void PLUGIN_CALL AmxLoad(AMX *amx) {
 
 PLUGIN_EXPORT void PLUGIN_CALL AmxUnload(AMX *amx) {
   Plugin::Instance().DoAmxUnload(amx);
+}
+
+PLUGIN_EXPORT unsigned int PLUGIN_CALL Supports() {
+  return SUPPORTS_VERSION | SUPPORTS_AMX_NATIVES;
 }

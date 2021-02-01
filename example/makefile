@@ -1,4 +1,4 @@
-OUTFILE = "pawnexample.so"
+OUTFILE = "sampptl_example.so"
 
 COMPILE_FLAGS=-m32 -c -O3 -w
 LINK_FLAGS=-m32 -shared -O3 -static-libgcc -static-libstdc++
