@@ -725,10 +725,15 @@ class AbstractPlugin {
 
   template <auto func, bool expand_params = true>
   void RegisterNative(const char *name) {
-    natives_[NativeGenerator<
-        typename std::add_pointer<
-            typename std::remove_pointer<decltype(func)>::type>::type,
-        func, expand_params>::Native] = name;
+    if constexpr (std::is_member_function_pointer<decltype(func)>::value) {
+      natives_[NativeGenerator<decltype(func), func, expand_params>::Native] =
+          name;
+    } else {
+      natives_[NativeGenerator<
+          typename std::add_pointer<
+              typename std::remove_pointer<decltype(func)>::type>::type,
+          func, expand_params>::Native] = name;
+    }
   }
 
   const std::string &GetNativeName(AMX_NATIVE func) {
@@ -777,6 +782,36 @@ class AbstractPlugin {
                       std::make_index_sequence<sizeof...(Args)>{});
         } else {
           return func(&script, params);
+        }
+      } catch (const std::exception &e) {
+        plugin.Log("%s: %s", plugin.GetNativeName(Native).c_str(), e.what());
+      }
+
+      return 0;
+    }
+  };
+
+  template <typename... Args, auto func, bool expand_params>
+  struct NativeGenerator<cell (ScriptT::*)(Args...), func, expand_params> {
+    template <std::size_t... index>
+    inline static cell Call(ScriptT *script, cell *params,
+                            std::index_sequence<index...>) {
+      return (script->*func)(CellT{params[index + 1], script}...);
+    }
+
+    static cell AMX_NATIVE_CALL Native(AMX *amx, cell *params) {
+      auto &plugin = PluginT::Instance();
+
+      try {
+        auto &script = plugin.GetScript(amx);
+
+        if constexpr (expand_params) {
+          script.AssertParams(sizeof...(Args), params);
+
+          return Call(&script, params,
+                      std::make_index_sequence<sizeof...(Args)>{});
+        } else {
+          return (script.*func)(params);
         }
       } catch (const std::exception &e) {
         plugin.Log("%s: %s", plugin.GetNativeName(Native).c_str(), e.what());
