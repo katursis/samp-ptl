@@ -80,7 +80,19 @@ class Amx {
 
   template <bool raise_error = true>
   int Exec(cell *retval, int index) {
-    return Call<PLUGIN_AMX_EXPORT_Exec, raise_error>(amx_, retval, index);
+    int result = Call<PLUGIN_AMX_EXPORT_Exec, false>(amx_, retval, index);
+
+    if constexpr (raise_error) {
+      if (result != AMX_ERR_NONE) {
+        RaiseError<false>(result);
+
+        throw std::runtime_error{"AMX error occurred in " +
+                                 GetPublicName(index) + ": " +
+                                 StrError(result)};
+      }
+    }
+
+    return result;
   }
 
   template <bool raise_error = true>
@@ -297,12 +309,21 @@ class Amx {
 
         throw std::runtime_error{std::string(__func__) + ": amx_" +
                                  StrFunction(func) + "(" + DumpArgs(args...) +
-                                 "): " + StrError(result) + " (" +
-                                 std::to_string(result) + ")"};
+                                 "): " + StrError(result)};
       }
     }
 
     return result;
+  }
+
+  inline std::string GetPublicName(int index) {
+    int len{};
+    NameLength(&len);
+
+    std::unique_ptr<char[]> name{new char[len + 1]{}};
+    GetPublic(index, name.get());
+
+    return name.get();
   }
 
   template <typename T, typename... Args>
@@ -315,7 +336,7 @@ class Amx {
     return ss.str();
   }
 
-  inline const std::string &StrFunction(PLUGIN_AMX_EXPORT func) {
+  inline const std::string StrFunction(PLUGIN_AMX_EXPORT func) {
     static const std::string functions[] = {
         "Align16",      "Align32",    "Align64",     "Allot",
         "Callback",     "Cleanup",    "Clone",       "Exec",
@@ -330,14 +351,14 @@ class Amx {
         "UTF8Check",    "UTF8Get",    "UTF8Len",     "UTF8Put",
     };
 
-    if (func < 0 || func >= sizeof(functions) / sizeof(functions[0])) {
-      return "(unknown function)";
+    if (func < 0 || func >= (sizeof(functions) / sizeof(functions[0]))) {
+      return "(unknown function, " + std::to_string(func) + ")";
     }
 
     return functions[func];
   }
 
-  inline const std::string &StrError(int errnum) {
+  inline const std::string StrError(int errnum) {
     static const std::string messages[] = {
         "(none)",                                          // AMX_ERR_NONE
         "Forced exit",                                     // AMX_ERR_EXIT
@@ -367,8 +388,8 @@ class Amx {
         "Parameter error",                                 // AMX_ERR_PARAMS
     };
 
-    if (errnum < 0 || errnum >= sizeof(messages) / sizeof(messages[0])) {
-      return "(unknown error)";
+    if (errnum < 0 || errnum >= (sizeof(messages) / sizeof(messages[0]))) {
+      return "(unknown error, " + std::to_string(errnum) + ")";
     }
 
     return messages[errnum];
@@ -487,15 +508,7 @@ class AbstractScript {
 
   bool IsGamemode() const { return is_gamemode_; }
 
-  std::string GetPublicName(int index) {
-    int len{};
-    amx_->NameLength(&len);
-
-    std::unique_ptr<char[]> name{new char[len + 1]{}};
-    amx_->GetPublic(index, name.get());
-
-    return name.get();
-  }
+  std::string GetPublicName(int index) { return amx_->GetPublicName(index); }
 
   template <typename T = cell>
   T GetPublicVarValue(const char *name) {
