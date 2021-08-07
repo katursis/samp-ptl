@@ -633,6 +633,30 @@ class AbstractPlugin {
     return instance;
   }
 
+  static bool DoLoad(void **ppData) { return Instance().DoLoadImpl(ppData); }
+
+  static void DoUnload() { Instance().DoUnloadImpl(); }
+
+  static void DoAmxLoad(AMX *amx) { Instance().DoAmxLoadImpl(amx); }
+
+  static void DoAmxUnload(AMX *amx) { Instance().DoAmxUnloadImpl(amx); }
+
+  static ScriptT &GetScript(AMX *amx) { return Instance().GetScriptImpl(amx); }
+
+  static bool EveryScript(
+      std::function<bool(const std::shared_ptr<ScriptT> &)> func) {
+    return Instance().EveryScriptImpl(func);
+  }
+
+  static const std::string &GetNativeName(AMX_NATIVE func) {
+    return Instance().GetNativeNameImpl(func);
+  }
+
+  template <typename... Args>
+  static void Log(const std::string &fmt, Args... args) {
+    Instance().LogImpl(fmt, args...);
+  }
+
   int Version() { return 100; };  // 1.0.0
 
   const char *Name() { return typeid(PluginT).name(); };
@@ -663,7 +687,88 @@ class AbstractPlugin {
     return version;
   }
 
-  bool DoLoad(void **ppData) {
+  template <auto func, bool expand_params = true>
+  void RegisterNative(const char *name) {
+    if constexpr (std::is_member_function_pointer<decltype(func)>::value) {
+      natives_[NativeGenerator<decltype(func), func, expand_params>::Native] =
+          name;
+    } else {
+      natives_[NativeGenerator<
+          typename std::add_pointer<
+              typename std::remove_pointer<decltype(func)>::type>::type,
+          func, expand_params>::Native] = name;
+    }
+  }
+
+ protected:
+  template <typename Sig, Sig, bool>
+  struct NativeGenerator;
+
+  template <typename... Args, auto func, bool expand_params>
+  struct NativeGenerator<cell (*)(ScriptT *, Args...), func, expand_params> {
+    template <std::size_t... index>
+    inline static cell Call(ScriptT *script, cell *params,
+                            std::index_sequence<index...>) {
+      return func(script, CellT{params[index + 1], script}...);
+    }
+
+    static cell AMX_NATIVE_CALL Native(AMX *amx, cell *params) {
+      try {
+        auto &script = PluginT::GetScript(amx);
+
+        if constexpr (expand_params) {
+          script.AssertParams(sizeof...(Args), params);
+
+          return Call(&script, params,
+                      std::make_index_sequence<sizeof...(Args)>{});
+        } else {
+          return func(&script, params);
+        }
+      } catch (const std::exception &e) {
+        PluginT::Log("%s: %s", PluginT::GetNativeName(Native).c_str(),
+                     e.what());
+      }
+
+      return 0;
+    }
+  };
+
+  template <typename... Args, auto func, bool expand_params>
+  struct NativeGenerator<cell (ScriptT::*)(Args...), func, expand_params> {
+    template <std::size_t... index>
+    inline static cell Call(ScriptT *script, cell *params,
+                            std::index_sequence<index...>) {
+      return (script->*func)(CellT{params[index + 1], script}...);
+    }
+
+    static cell AMX_NATIVE_CALL Native(AMX *amx, cell *params) {
+      try {
+        auto &script = PluginT::GetScript(amx);
+
+        if constexpr (expand_params) {
+          script.AssertParams(sizeof...(Args), params);
+
+          return Call(&script, params,
+                      std::make_index_sequence<sizeof...(Args)>{});
+        } else {
+          return (script.*func)(params);
+        }
+      } catch (const std::exception &e) {
+        PluginT::Log("%s: %s", PluginT::GetNativeName(Native).c_str(),
+                     e.what());
+      }
+
+      return 0;
+    }
+  };
+
+  AbstractPlugin() = default;
+  AbstractPlugin(const AbstractPlugin &) = delete;
+  AbstractPlugin(AbstractPlugin &&) = delete;
+  AbstractPlugin &operator=(const AbstractPlugin &) = delete;
+  AbstractPlugin &operator=(AbstractPlugin &&) = delete;
+
+  inline bool DoLoadImpl(void **ppData) {
     plugin_data_ = ppData;
 
     logprintf_ =
@@ -683,7 +788,7 @@ class AbstractPlugin {
     return false;
   }
 
-  void DoUnload() {
+  inline void DoUnloadImpl() {
     try {
       impl_->OnUnload();
     } catch (const std::exception &e) {
@@ -691,7 +796,7 @@ class AbstractPlugin {
     }
   }
 
-  void DoAmxLoad(AMX *amx) {
+  inline void DoAmxLoadImpl(AMX *amx) {
     try {
       auto script = std::make_shared<ScriptT>();
 
@@ -737,7 +842,7 @@ class AbstractPlugin {
     }
   }
 
-  void DoAmxUnload(AMX *amx) {
+  inline void DoAmxUnloadImpl(AMX *amx) {
     auto script = std::find_if(scripts_.begin(), scripts_.end(),
                                [amx](auto &script) { return *script == amx; });
 
@@ -746,7 +851,7 @@ class AbstractPlugin {
     }
   }
 
-  ScriptT &GetScript(AMX *amx) {
+  inline ScriptT &GetScriptImpl(AMX *amx) {
     auto script = std::find_if(scripts_.begin(), scripts_.end(),
                                [amx](auto &script) { return *script == amx; });
 
@@ -757,29 +862,17 @@ class AbstractPlugin {
     return **script;
   }
 
-  template <auto func, bool expand_params = true>
-  void RegisterNative(const char *name) {
-    if constexpr (std::is_member_function_pointer<decltype(func)>::value) {
-      natives_[NativeGenerator<decltype(func), func, expand_params>::Native] =
-          name;
-    } else {
-      natives_[NativeGenerator<
-          typename std::add_pointer<
-              typename std::remove_pointer<decltype(func)>::type>::type,
-          func, expand_params>::Native] = name;
-    }
-  }
-
-  const std::string &GetNativeName(AMX_NATIVE func) {
-    return natives_.at(func);
-  }
-
-  bool EveryScript(std::function<bool(const std::shared_ptr<ScriptT> &)> func) {
+  inline bool EveryScriptImpl(
+      std::function<bool(const std::shared_ptr<ScriptT> &)> func) {
     return std::all_of(scripts_.begin(), scripts_.end(), func);
   }
 
+  inline const std::string &GetNativeNameImpl(AMX_NATIVE func) {
+    return natives_.at(func);
+  }
+
   template <typename... Args>
-  void Log(const std::string &fmt, Args... args) {
+  inline void LogImpl(const std::string &fmt, Args... args) {
     if (!logprintf_) {
       throw std::runtime_error{"logprintf_ is null"};
     }
@@ -790,76 +883,6 @@ class AbstractPlugin {
       logprintf_(("[%s] " + fmt).c_str(), name_.c_str(), args...);
     }
   }
-
- protected:
-  template <typename Sig, Sig, bool>
-  struct NativeGenerator;
-
-  template <typename... Args, auto func, bool expand_params>
-  struct NativeGenerator<cell (*)(ScriptT *, Args...), func, expand_params> {
-    template <std::size_t... index>
-    inline static cell Call(ScriptT *script, cell *params,
-                            std::index_sequence<index...>) {
-      return func(script, CellT{params[index + 1], script}...);
-    }
-
-    static cell AMX_NATIVE_CALL Native(AMX *amx, cell *params) {
-      auto &plugin = PluginT::Instance();
-
-      try {
-        auto &script = plugin.GetScript(amx);
-
-        if constexpr (expand_params) {
-          script.AssertParams(sizeof...(Args), params);
-
-          return Call(&script, params,
-                      std::make_index_sequence<sizeof...(Args)>{});
-        } else {
-          return func(&script, params);
-        }
-      } catch (const std::exception &e) {
-        plugin.Log("%s: %s", plugin.GetNativeName(Native).c_str(), e.what());
-      }
-
-      return 0;
-    }
-  };
-
-  template <typename... Args, auto func, bool expand_params>
-  struct NativeGenerator<cell (ScriptT::*)(Args...), func, expand_params> {
-    template <std::size_t... index>
-    inline static cell Call(ScriptT *script, cell *params,
-                            std::index_sequence<index...>) {
-      return (script->*func)(CellT{params[index + 1], script}...);
-    }
-
-    static cell AMX_NATIVE_CALL Native(AMX *amx, cell *params) {
-      auto &plugin = PluginT::Instance();
-
-      try {
-        auto &script = plugin.GetScript(amx);
-
-        if constexpr (expand_params) {
-          script.AssertParams(sizeof...(Args), params);
-
-          return Call(&script, params,
-                      std::make_index_sequence<sizeof...(Args)>{});
-        } else {
-          return (script.*func)(params);
-        }
-      } catch (const std::exception &e) {
-        plugin.Log("%s: %s", plugin.GetNativeName(Native).c_str(), e.what());
-      }
-
-      return 0;
-    }
-  };
-
-  AbstractPlugin() = default;
-  AbstractPlugin(const AbstractPlugin &) = delete;
-  AbstractPlugin(AbstractPlugin &&) = delete;
-  AbstractPlugin &operator=(const AbstractPlugin &) = delete;
-  AbstractPlugin &operator=(AbstractPlugin &&) = delete;
 
   std::list<std::shared_ptr<ScriptT>> scripts_;
   std::unordered_map<AMX_NATIVE, std::string> natives_;
