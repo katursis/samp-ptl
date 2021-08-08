@@ -488,23 +488,27 @@ class Public {
 template <typename ScriptT>
 class AbstractScript {
  public:
-  class Cell {
-   public:
-    operator cell() { return amx_addr_; }
+  struct NativeParam {
+    operator cell() { return raw_value; }
 
-    operator cell *() { return script_->GetPhysAddr(amx_addr_); }
+    operator cell *() { return script.GetPhysAddr(raw_value); }
 
-    operator float() { return amx_ctof(amx_addr_); }
+    operator float() { return amx_ctof(raw_value); }
 
     operator float *() {
-      return reinterpret_cast<float *>(script_->GetPhysAddr(amx_addr_));
+      return reinterpret_cast<float *>(script.GetPhysAddr(raw_value));
     }
 
-    operator std::string() { return script_->GetString(amx_addr_); }
+    operator std::string() { return script.GetString(raw_value); }
 
-    cell amx_addr_{};
-    ScriptT *script_{};
+    cell raw_value{};
+    ScriptT &script{};
   };
+
+  template <typename T>
+  inline T PrepareNativeParam(cell value) {
+    return T{value, static_cast<ScriptT &>(*this)};
+  }
 
   bool IsGamemode() const { return is_gamemode_; }
 
@@ -563,14 +567,17 @@ class AbstractScript {
 
   void Init(AMX *amx, void *amx_functions, LogPrintf logprintf,
             const std::string &plugin_name) {
+    impl_ = static_cast<ScriptT *>(this);
+
+    logprintf_ = logprintf;
+
+    plugin_name_ = plugin_name;
+
     amx_ = std::make_shared<Amx>(amx, amx_functions);
 
     if (impl_->VarIsGamemode() && PublicVarExists(impl_->VarIsGamemode())) {
       is_gamemode_ = GetPublicVarValue<bool>(impl_->VarIsGamemode());
     }
-
-    logprintf_ = logprintf;
-    plugin_name_ = plugin_name;
   }
 
   const auto &GetAmx() const { return amx_; }
@@ -624,7 +631,7 @@ class AbstractScript {
 class DummyScript : public AbstractScript<DummyScript> {};
 
 template <typename PluginT, typename ScriptT = DummyScript,
-          typename CellT = typename ScriptT::Cell>
+          typename NativeParamT = typename ScriptT::NativeParam>
 class AbstractPlugin {
  public:
   static PluginT &Instance() {
@@ -705,11 +712,12 @@ class AbstractPlugin {
   struct NativeGenerator;
 
   template <typename... Args, auto func, bool expand_params>
-  struct NativeGenerator<cell (*)(ScriptT *, Args...), func, expand_params> {
+  struct NativeGenerator<cell (*)(ScriptT &, Args...), func, expand_params> {
     template <std::size_t... index>
-    inline static cell Call(ScriptT *script, cell *params,
+    inline static cell Call(ScriptT &script, cell *params,
                             std::index_sequence<index...>) {
-      return func(script, CellT{params[index + 1], script}...);
+      return func(script, script.template PrepareNativeParam<NativeParamT>(
+                              params[index + 1])...);
     }
 
     static cell AMX_NATIVE_CALL Native(AMX *amx, cell *params) {
@@ -719,10 +727,10 @@ class AbstractPlugin {
         if constexpr (expand_params) {
           script.AssertParams(sizeof...(Args), params);
 
-          return Call(&script, params,
+          return Call(script, params,
                       std::make_index_sequence<sizeof...(Args)>{});
         } else {
-          return func(&script, params);
+          return func(script, params);
         }
       } catch (const std::exception &e) {
         PluginT::Log("%s: %s", PluginT::GetNativeName(Native).c_str(),
@@ -736,9 +744,10 @@ class AbstractPlugin {
   template <typename... Args, auto func, bool expand_params>
   struct NativeGenerator<cell (ScriptT::*)(Args...), func, expand_params> {
     template <std::size_t... index>
-    inline static cell Call(ScriptT *script, cell *params,
+    inline static cell Call(ScriptT &script, cell *params,
                             std::index_sequence<index...>) {
-      return (script->*func)(CellT{params[index + 1], script}...);
+      return (script.*func)(script.template PrepareNativeParam<NativeParamT>(
+          params[index + 1])...);
     }
 
     static cell AMX_NATIVE_CALL Native(AMX *amx, cell *params) {
@@ -748,7 +757,7 @@ class AbstractPlugin {
         if constexpr (expand_params) {
           script.AssertParams(sizeof...(Args), params);
 
-          return Call(&script, params,
+          return Call(script, params,
                       std::make_index_sequence<sizeof...(Args)>{});
         } else {
           return (script.*func)(params);
