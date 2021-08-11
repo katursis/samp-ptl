@@ -86,7 +86,7 @@ class Amx {
       if (result != AMX_ERR_NONE) {
         RaiseError<false>(result);
 
-        throw std::runtime_error{"AMX error occurred in " +
+        throw std::runtime_error{"AMX error occurred in public " +
                                  GetPublicName(index) + ": " +
                                  StrError(result)};
       }
@@ -873,7 +873,17 @@ class AbstractPlugin {
 
   inline bool EveryScriptImpl(
       std::function<bool(const std::shared_ptr<ScriptT> &)> func) {
-    return std::all_of(scripts_.begin(), scripts_.end(), func);
+    for (const auto &script : scripts_) {
+      try {
+        if (!func(script)) {
+          return false;
+        }
+      } catch (const std::exception &e) {
+        LogImpl("%s: %s", __func__, e.what());
+      }
+    }
+
+    return true;
   }
 
   inline const std::string &GetNativeNameImpl(AMX_NATIVE func) {
