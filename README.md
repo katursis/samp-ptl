@@ -4,11 +4,11 @@ C++17 template library that allows you to create your own plugins for **SA:MP** 
 
 ## Main features
 * Safe C++ AMX API with errors handling
-* Pool of scripts (gamemode at the end)
+* Queue of AMX scripts (gamemode at the end)
 * Easy executing the callbacks (publics) with optional caching
-* Easy registration of natives: auto-conversion parameters from cell type to common C++ types. You may also define your own conversions
+* Easy registration of natives: auto-conversion parameters from cell type to common C++ types. You may also define your own conversions by extending Script::NativeParam struct
 * Logging
-* Checking for a version match between the plugin and scripts
+* Optional checking for a version match between the plugin and scripts
 
 ## Example
 
@@ -31,7 +31,7 @@ class Script : public ptl::AbstractScript<Script> {
 
 class Plugin : public ptl::AbstractPlugin<Plugin, Script> {
  public:
-  const char *Name() { return "samp-ptl-example-plugin"; }
+  const char *Name() { return "samp-example-plugin"; }
 
   bool OnLoad() {
     RegisterNative<&Script::n_ExampleNative>("ExampleNative");
@@ -41,10 +41,32 @@ class Plugin : public ptl::AbstractPlugin<Plugin, Script> {
     return true;
   }
 };
+
+PLUGIN_EXPORT unsigned int PLUGIN_CALL Supports() {
+  return SUPPORTS_VERSION | SUPPORTS_AMX_NATIVES;
+}
+
+PLUGIN_EXPORT bool PLUGIN_CALL Load(void **ppData) {
+  return Plugin::DoLoad(ppData);
+}
+
+PLUGIN_EXPORT void PLUGIN_CALL Unload() {
+  Plugin::DoUnload();
+}
+
+PLUGIN_EXPORT void PLUGIN_CALL AmxLoad(AMX *amx) {
+  Plugin::DoAmxLoad(amx);
+}
+
+PLUGIN_EXPORT void PLUGIN_CALL AmxUnload(AMX *amx) {
+  Plugin::DoAmxUnload(amx);
+}
 ```
 
 ## More examples
-[Simple example](https://github.com/katursis/samp-ptl/tree/master/example)
+[Simple plugin](https://github.com/katursis/samp-ptl/tree/master/example)
+
+[Pawn.RakNet](https://github.com/katursis/Pawn.RakNet)
 
 [Pawn.CMD](https://github.com/katursis/Pawn.CMD)
 
