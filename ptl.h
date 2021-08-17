@@ -648,6 +648,8 @@ class AbstractPlugin {
 
   static void DoAmxUnload(AMX *amx) { Instance().DoAmxUnloadImpl(amx); }
 
+  static void DoProcessTick() { Instance().DoProcessTickImpl(); }
+
   static ScriptT &GetScript(AMX *amx) { return Instance().GetScriptImpl(amx); }
 
   static bool EveryScript(
@@ -675,6 +677,8 @@ class AbstractPlugin {
   }
 
   void OnUnload() { Log("plugin unloaded"); }
+
+  void OnProcessTick() {}
 
   std::string VersionAsString() const {
     std::string version;
@@ -857,6 +861,14 @@ class AbstractPlugin {
 
     if (script != scripts_.end()) {
       scripts_.erase(script);
+    }
+  }
+
+  inline void DoProcessTickImpl() {
+    try {
+      impl_->OnProcessTick();
+    } catch (const std::exception &e) {
+      Log("%s: %s", __func__, e.what());
     }
   }
 
