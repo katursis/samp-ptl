@@ -589,14 +589,14 @@ class AbstractScript {
   int GetVersion() { return GetPublicVarValue<int>(impl_->VarVersion()); }
 
   inline void AssertParams(std::size_t count, cell *params) const {
-    if (params[0] != (count * sizeof(cell))) {
+    if (static_cast<ucell>(params[0]) != (count * sizeof(cell))) {
       throw std::runtime_error{"Number of parameters must be equal to " +
                                std::to_string(count)};
     }
   }
 
   inline void AssertMinParams(std::size_t min_count, cell *params) const {
-    if (params[0] < (min_count * sizeof(cell))) {
+    if (static_cast<ucell>(params[0]) < (min_count * sizeof(cell))) {
       throw std::runtime_error{"Number of parameters must be >= " +
                                std::to_string(min_count)};
     }
