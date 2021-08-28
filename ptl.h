@@ -34,6 +34,9 @@
 #include "amx/amx.h"
 #include "plugincommon.h"
 
+#define PACK_PLUGIN_VERSION(major, minor, patch) \
+  (((major) << 16) | ((minor) << 8) | (patch))
+
 namespace ptl {  // Plugin Template Library
 using LogPrintf = void (*)(const char *fmt, ...);
 
@@ -666,7 +669,7 @@ class AbstractPlugin {
     Instance().LogImpl(fmt, args...);
   }
 
-  int Version() { return 100; };  // 1.0.0
+  int Version() { return PACK_PLUGIN_VERSION(1, 0, 0); };  // 1.0.0
 
   const char *Name() { return typeid(PluginT).name(); };
 
@@ -680,23 +683,7 @@ class AbstractPlugin {
 
   void OnProcessTick() {}
 
-  std::string VersionAsString() const {
-    std::string version;
-
-    int value = version_;
-
-    while (value) {
-      version = std::to_string(value % 10) + version;
-
-      value /= 10;
-
-      if (value) {
-        version = "." + version;
-      }
-    }
-
-    return version;
-  }
+  std::string VersionAsString() const { return VersionToString(version_); }
 
   template <auto func, bool expand_params = true>
   void RegisterNative(const char *name) {
@@ -793,6 +780,8 @@ class AbstractPlugin {
       name_ = impl_->Name();
       version_ = impl_->Version();
 
+      Log("plugin v%s loading...", VersionAsString().c_str());
+
       return impl_->OnLoad();
     } catch (const std::exception &e) {
       Log("%s: %s", __func__, e.what());
@@ -818,8 +807,8 @@ class AbstractPlugin {
 
       if (script->HasVersion() && script->GetVersion() != version_) {
         throw std::runtime_error{"Mismatch between the plugin (" +
-                                 std::to_string(version_) + ") and include (" +
-                                 std::to_string(script->GetVersion()) +
+                                 VersionToString(version_) + ") and include (" +
+                                 VersionToString(script->GetVersion()) +
                                  ") versions"};
       }
 
@@ -913,6 +902,18 @@ class AbstractPlugin {
     } else {
       logprintf_(("[%s] " + fmt).c_str(), name_.c_str(), args...);
     }
+  }
+
+  inline std::string VersionToString(int version) const {
+    int major = (version >> 16) & 0xFF;
+    int minor = (version >> 8) & 0xFF;
+    int patch = version & 0xFF;
+
+    std::stringstream ss;
+
+    ss << major << "." << minor << "." << patch;
+
+    return ss.str();
   }
 
   std::list<std::shared_ptr<ScriptT>> scripts_;
