@@ -660,7 +660,7 @@ class AbstractPlugin {
     return Instance().EveryScriptImpl(func);
   }
 
-  static const std::string &GetNativeName(AMX_NATIVE func) {
+  static std::string GetNativeName(AMX_NATIVE func) {
     return Instance().GetNativeNameImpl(func);
   }
 
@@ -688,13 +688,13 @@ class AbstractPlugin {
   template <auto func, bool expand_params = true>
   void RegisterNative(const char *name) {
     if constexpr (std::is_member_function_pointer<decltype(func)>::value) {
-      natives_[NativeGenerator<decltype(func), func, expand_params>::Native] =
-          name;
+      natives_[name] =
+          NativeGenerator<decltype(func), func, expand_params>::Native;
     } else {
-      natives_[NativeGenerator<
+      natives_[name] = NativeGenerator<
           typename std::add_pointer<
               typename std::remove_pointer<decltype(func)>::type>::type,
-          func, expand_params>::Native] = name;
+          func, expand_params>::Native;
     }
   }
 
@@ -812,8 +812,8 @@ class AbstractPlugin {
                                  ") versions"};
       }
 
-      for (auto &item : natives_) {
-        script->RegisterNative(item.second.c_str(), item.first);
+      for (auto &[native_name, native_func] : natives_) {
+        script->RegisterNative(native_name.c_str(), native_func);
       }
 
       if (!script->OnLoad()) {
@@ -887,8 +887,14 @@ class AbstractPlugin {
     return true;
   }
 
-  inline const std::string &GetNativeNameImpl(AMX_NATIVE func) {
-    return natives_.at(func);
+  inline std::string GetNativeNameImpl(AMX_NATIVE func) {
+    for (auto &[native_name, native_func] : natives_) {
+      if (func == native_func) {
+        return native_name;
+      }
+    }
+
+    return "(unknown native)";
   }
 
   template <typename... Args>
@@ -917,7 +923,7 @@ class AbstractPlugin {
   }
 
   std::list<std::shared_ptr<ScriptT>> scripts_;
-  std::unordered_map<AMX_NATIVE, std::string> natives_;
+  std::unordered_map<std::string, AMX_NATIVE> natives_;
 
   void **plugin_data_{};
   LogPrintf logprintf_{};
