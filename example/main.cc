@@ -22,8 +22,6 @@
  * SOFTWARE.
  */
 
-#define _GLIBCXX_USE_CXX11_ABI 0
-
 #include "../ptl.h"
 
 class Script : public ptl::AbstractScript<Script> {

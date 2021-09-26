@@ -1,0 +1,3 @@
+[submodule "example/cmake/modules"]
+	path = example/cmake/modules
+	url = https://github.com/katursis/samp-cmake-modules
