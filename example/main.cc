@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-#include "../ptl.h"
+#include "samp-ptl/ptl.h"
 
 class Script : public ptl::AbstractScript<Script> {
  public:
