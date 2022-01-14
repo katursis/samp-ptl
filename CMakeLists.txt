@@ -17,7 +17,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 target_include_directories(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_STDINT_H)
+target_compile_definitions(${PROJECT_NAME} INTERFACE HAVE_STDINT_H)
 
 if (BUILD_EXAMPLES)
     add_subdirectory(example)
