@@ -64,7 +64,7 @@ enum PLUGIN_DATA_TYPE {
       0x11,  // int (*AmxCallPublicFilterScript)(char *szFunctionName)
   PLUGIN_DATA_CALLPUBLIC_GM =
       0x12,  // int (*AmxCallPublicGameMode)(char *szFunctionName)
-
+  PLUGIN_DATA_NETGAME = 0xE1,
 };
 
 //----------------------------------------------------------
