@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2020-2021 katursis
+ * Copyright (c) 2020-2022 katursis
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@
 #include <list>
 #include <memory>
 #include <sstream>
+#include <tuple>
 
 #include "amx/amx.h"
 #include "plugincommon.h"
@@ -669,6 +670,10 @@ class AbstractPlugin {
     Instance().LogImpl(fmt, args...);
   }
 
+  static std::tuple<int, int, int> VersionToTuple(int version) {
+    return Instance().VersionToTupleImpl(version);
+  }
+
   int Version() { return PACK_PLUGIN_VERSION(1, 0, 0); };  // 1.0.0
 
   const char *Name() { return typeid(PluginT).name(); };
@@ -911,15 +916,21 @@ class AbstractPlugin {
   }
 
   inline std::string VersionToString(int version) const {
-    int major = (version >> 16) & 0xFF;
-    int minor = (version >> 8) & 0xFF;
-    int patch = version & 0xFF;
+    auto [major, minor, patch] = VersionToTupleImpl(version);
 
     std::stringstream ss;
 
     ss << major << "." << minor << "." << patch;
 
     return ss.str();
+  }
+
+  inline std::tuple<int, int, int> VersionToTupleImpl(int version) const {
+    int major = (version >> 16) & 0xFF;
+    int minor = (version >> 8) & 0xFF;
+    int patch = version & 0xFF;
+
+    return std::make_tuple(major, minor, patch);
   }
 
   std::list<std::shared_ptr<ScriptT>> scripts_;

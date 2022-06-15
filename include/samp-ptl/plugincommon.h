@@ -40,6 +40,8 @@
 #error "You must define one of WIN32, LINUX or FREEBSD"
 #endif
 
+#define MAX_PLUGIN_DATA 256
+
 //----------------------------------------------------------
 
 enum SUPPORTS_FLAGS {
