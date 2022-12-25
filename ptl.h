@@ -408,7 +408,7 @@ class Public {
  public:
   Public(const std::string &name, const std::shared_ptr<Amx> &amx,
          bool use_caching = false)
-      : name_{name}, amx_{amx}, use_caching_{use_caching} {
+      : amx_{amx}, name_{name}, use_caching_{use_caching} {
     exists_ = amx_->FindPublic<false>(name_.c_str(), &index_) == AMX_ERR_NONE &&
               index_ >= 0;
   }
@@ -427,7 +427,7 @@ class Public {
       amx_->FindPublic(name_.c_str(), &index_);
     }
 
-    if constexpr (sizeof...(Args)) {
+    if constexpr (sizeof...(Args) != 0) {
       Push(args...);
     }
 
