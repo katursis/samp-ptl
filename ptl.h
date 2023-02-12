@@ -335,10 +335,23 @@ class Amx {
   inline std::string DumpArgs(T arg1, Args... args) {
     std::stringstream ss;
 
-    ss << arg1;
-    ((ss << ", " << args), ...);
+    ss << AddQuotesIfStr(arg1);
+    ((ss << ", " << AddQuotesIfStr(args)), ...);
 
     return ss.str();
+  }
+
+  template <typename T>
+  inline auto AddQuotesIfStr(T arg) {
+    if constexpr (std::is_same<T, const char *>::value ||
+                  std::is_same<T, char *>::value) {
+      return "\"" + std::string(arg) + "\"";
+    } else if constexpr (std::is_same<typename std::decay<T>::type,
+                                      std::string>::value) {
+      return "\"" + arg + "\"";
+    } else {
+      return arg;
+    }
   }
 
   inline const std::string StrFunction(PLUGIN_AMX_EXPORT func) {
