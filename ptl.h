@@ -43,10 +43,11 @@ using LogPrintf = void (*)(const char *fmt, ...);
 
 class Amx {
  public:
-  Amx(AMX *amx, void *amx_functions, LogPrintf logprintf,
+  Amx(AMX *amx, void *amx_functions, bool log_amx_errors, LogPrintf logprintf,
       const std::string &plugin_name)
       : amx_{amx},
         amx_functions_{amx_functions},
+        log_amx_errors_{log_amx_errors},
         logprintf_{logprintf},
         plugin_name_{plugin_name} {}
 
@@ -91,7 +92,7 @@ class Amx {
     int result = Call<PLUGIN_AMX_EXPORT_Exec, false>(amx_, retval, index);
 
     if constexpr (raise_error) {
-      if (result != AMX_ERR_NONE) {
+      if (log_amx_errors_ && result != AMX_ERR_NONE) {
         Log(StrError(result) + " in public " + GetPublicName(index) + "(" +
             debug_args_values +
             ") - please note that the AMX error is not related with the "
@@ -311,7 +312,7 @@ class Amx {
         amx_functions_)[func](args...);
 
     if constexpr (raise_error && std::is_same<int, Ret>::value) {
-      if (result != AMX_ERR_NONE) {
+      if (log_amx_errors_ && result != AMX_ERR_NONE) {
         Log(StrError(result) + " in amx_" + StrFunction(func) + "(" +
             DumpArgs(args...) + ")");
       }
@@ -418,6 +419,7 @@ class Amx {
 
   LogPrintf logprintf_{};
   std::string plugin_name_;
+  bool log_amx_errors_{};
 };
 
 class Public {
@@ -589,15 +591,16 @@ class AbstractScript {
 
   bool OnLoad() { return true; }
 
-  void Init(AMX *amx, void *amx_functions, LogPrintf logprintf,
-            const std::string &plugin_name) {
+  void Init(AMX *amx, void *amx_functions, bool log_amx_errors,
+            LogPrintf logprintf, const std::string &plugin_name) {
     impl_ = static_cast<ScriptT *>(this);
 
     logprintf_ = logprintf;
 
     plugin_name_ = plugin_name;
 
-    amx_ = std::make_shared<Amx>(amx, amx_functions, logprintf, plugin_name);
+    amx_ = std::make_shared<Amx>(amx, amx_functions, log_amx_errors, logprintf,
+                                 plugin_name);
 
     if (impl_->VarIsGamemode() && PublicVarExists(impl_->VarIsGamemode())) {
       is_gamemode_ = GetPublicVarValue<bool>(impl_->VarIsGamemode());
@@ -697,6 +700,8 @@ class AbstractPlugin {
   int Version() { return PACK_PLUGIN_VERSION(1, 0, 0); };  // 1.0.0
 
   const char *Name() { return typeid(PluginT).name(); };
+
+  bool LogAmxErrors() { return true; };
 
   bool OnLoad() {
     Log("plugin v%s loaded", VersionAsString().c_str());
@@ -807,7 +812,11 @@ class AbstractPlugin {
 
       Log("plugin v%s loading...", VersionAsString().c_str());
 
-      return impl_->OnLoad();
+      bool loaded = impl_->OnLoad();
+
+      log_amx_errors_ = impl_->LogAmxErrors();
+
+      return loaded;
     } catch (const std::exception &e) {
       Log("%s: %s", __func__, e.what());
     }
@@ -827,8 +836,8 @@ class AbstractPlugin {
     try {
       auto script = std::make_shared<ScriptT>();
 
-      script->Init(amx, plugin_data_[PLUGIN_DATA_AMX_EXPORTS], logprintf_,
-                   name_);
+      script->Init(amx, plugin_data_[PLUGIN_DATA_AMX_EXPORTS], log_amx_errors_,
+                   logprintf_, name_);
 
       if (script->HasVersion() && script->GetVersion() != version_) {
         throw std::runtime_error{"Mismatch between the plugin (" +
@@ -958,6 +967,7 @@ class AbstractPlugin {
 
   void **plugin_data_{};
   LogPrintf logprintf_{};
+  bool log_amx_errors_{};
 
   std::string name_;
   int version_{};
