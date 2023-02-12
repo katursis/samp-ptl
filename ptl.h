@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2020-2022 katursis
+ * Copyright (c) 2020-2023 katursis
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,8 +43,12 @@ using LogPrintf = void (*)(const char *fmt, ...);
 
 class Amx {
  public:
-  Amx(AMX *amx, void *amx_functions)
-      : amx_{amx}, amx_functions_{amx_functions} {}
+  Amx(AMX *amx, void *amx_functions, LogPrintf logprintf,
+      const std::string &plugin_name)
+      : amx_{amx},
+        amx_functions_{amx_functions},
+        logprintf_{logprintf},
+        plugin_name_{plugin_name} {}
 
   uint16_t *Align16(uint16_t *v) {
     return Call<PLUGIN_AMX_EXPORT_Align16, false, uint16_t *>(v);
@@ -83,16 +87,15 @@ class Amx {
   }
 
   template <bool raise_error = true>
-  int Exec(cell *retval, int index) {
+  int Exec(cell *retval, int index, const std::string &debug_args_values = "") {
     int result = Call<PLUGIN_AMX_EXPORT_Exec, false>(amx_, retval, index);
 
     if constexpr (raise_error) {
       if (result != AMX_ERR_NONE) {
-        RaiseError<false>(result);
-
-        throw std::runtime_error{"AMX error occurred in public " +
-                                 GetPublicName(index) + ": " +
-                                 StrError(result)};
+        Log(StrError(result) + " in public " + GetPublicName(index) + "(" +
+            debug_args_values +
+            ") - please note that the AMX error is not related with the "
+            "plugin, but your script");
       }
     }
 
@@ -309,11 +312,8 @@ class Amx {
 
     if constexpr (raise_error && std::is_same<int, Ret>::value) {
       if (result != AMX_ERR_NONE) {
-        RaiseError<false>(result);
-
-        throw std::runtime_error{std::string(__func__) + ": amx_" +
-                                 StrFunction(func) + "(" + DumpArgs(args...) +
-                                 "): " + StrError(result)};
+        Log(StrError(result) + " in amx_" + StrFunction(func) + "(" +
+            DumpArgs(args...) + ")");
       }
     }
 
@@ -334,8 +334,8 @@ class Amx {
   inline std::string DumpArgs(T arg1, Args... args) {
     std::stringstream ss;
 
-    ss << typeid(T).name() << ":" << arg1;
-    ((ss << ", " << typeid(Args).name() << ":" << args), ...);
+    ss << arg1;
+    ((ss << ", " << args), ...);
 
     return ss.str();
   }
@@ -399,9 +399,25 @@ class Amx {
     return messages[errnum];
   }
 
+  template <typename... Args>
+  void Log(const std::string &fmt, Args... args) {
+    if (!logprintf_) {
+      throw std::runtime_error{"logprintf_ is null"};
+    }
+
+    if (plugin_name_.empty()) {
+      logprintf_(fmt.c_str(), args...);
+    } else {
+      logprintf_(("[%s] " + fmt).c_str(), plugin_name_.c_str(), args...);
+    }
+  }
+
  private:
   AMX *amx_{};
   void *amx_functions_{};
+
+  LogPrintf logprintf_{};
+  std::string plugin_name_;
 };
 
 class Public {
@@ -427,11 +443,15 @@ class Public {
       amx_->FindPublic(name_.c_str(), &index_);
     }
 
+    std::string debug_args_values = "";
+
     if constexpr (sizeof...(Args) != 0) {
       Push(args...);
+
+      debug_args_values = amx_->DumpArgs(args...);
     }
 
-    amx_->Exec(&retval, index_);
+    amx_->Exec(&retval, index_, debug_args_values);
 
     if (amx_addr_to_release_) {
       amx_->Release(amx_addr_to_release_);
@@ -577,7 +597,7 @@ class AbstractScript {
 
     plugin_name_ = plugin_name;
 
-    amx_ = std::make_shared<Amx>(amx, amx_functions);
+    amx_ = std::make_shared<Amx>(amx, amx_functions, logprintf, plugin_name);
 
     if (impl_->VarIsGamemode() && PublicVarExists(impl_->VarIsGamemode())) {
       is_gamemode_ = GetPublicVarValue<bool>(impl_->VarIsGamemode());
