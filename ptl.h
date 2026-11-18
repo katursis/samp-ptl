@@ -460,6 +460,8 @@ class Public {
 
     std::string debug_args_values = "";
 
+    const cell heap_before_push = amx_->GetPtr()->hea;
+
     if constexpr (sizeof...(Args) != 0) {
       Push(args...);
 
@@ -468,11 +470,7 @@ class Public {
 
     amx_->Exec(&retval, index_, debug_args_values);
 
-    if (amx_addr_to_release_) {
-      amx_->Release(amx_addr_to_release_);
-
-      amx_addr_to_release_ = 0;
-    }
+    amx_->Release(heap_before_push);
 
     return retval;
   }
@@ -496,10 +494,6 @@ class Public {
         cell amx_addr{};
 
         amx_->PushString(&amx_addr, nullptr, arg, 0, 0);
-
-        if (!amx_addr_to_release_) {
-          amx_addr_to_release_ = amx_addr;
-        }
       } else {
         amx_->Push(reinterpret_cast<cell>(arg));
       }
@@ -520,8 +514,6 @@ class Public {
   bool exists_{};
   bool cached_{};
   bool use_caching_{};
-
-  cell amx_addr_to_release_{};
 };
 
 template <typename ScriptT>
